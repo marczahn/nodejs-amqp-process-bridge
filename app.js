@@ -1,7 +1,7 @@
 var config = require('config'),
     amqp = require('amqplib'),
     exchangeService = require('./services/exchange-service');
-    connectionString = 'amqp://' + config.rabbitmq.connection.host + ':' + config.rabbitmq.connection.port,
+    connectionString = 'amqp://' + config.amqp.connection.host + ':' + config.amqp.connection.port,
     connectionOpened = amqp.connect(connectionString);
 
 connectionOpened.then(function(connection) {
@@ -19,7 +19,7 @@ connectionOpened.then(function(connection) {
     channelCreated.then(function(channel) {
         var queuesAsserted = {};
         exchangeService.init(channel);
-        config.rabbitmq.queues.forEach(function(queueConfig) {
+        config.amqp.queues.forEach(function(queueConfig) {
             queueAsserted =
                 channel.assertQueue(
                     queueConfig.name,
@@ -33,7 +33,7 @@ connectionOpened.then(function(connection) {
             }).then(function() {
                 queueConfig.routingKeys.forEach(function (routingKey) {
                     channel.bindQueue(
-                        queueConfig.name, config.rabbitmq.exchanges[queueConfig.exchange].name, routingKey
+                        queueConfig.name, config.amqp.exchanges[queueConfig.exchange].name, routingKey
                     );
                 });
             }).then(function() {
