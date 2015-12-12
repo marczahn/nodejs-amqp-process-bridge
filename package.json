@@ -1,0 +1,24 @@
+{
+  "name": "nodejs-process-bridge",
+  "version": "0.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"No tests specified\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marczahnlls/nodejs-process-bridge.git"
+  },
+  "author": "Marc Zahn",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/marczahnlls/nodejs-process-bridge/issues"
+  },
+  "dependencies": {
+    "amqplib": "^0.4.0",
+    "async": "^1.5.0",
+    "config": "^1.17.1",
+    "js-yaml": "^3.4.6"
+  }
+}

@@ -1,0 +1,18 @@
+rabbitmq:
+  connection:
+    host: 'localhost'
+    port: 5672
+    vhost: '/'
+    username: 'guest'
+    password: 'guest'
+  exchanges:
+    default:
+      name: 'exchange'
+      type: 'topic'
+      durable: true
+  queues:
+    -
+      durable: true
+      exchange: default
+      name: 'nodejs-process-bridge.queue'
+      routingKeys: ['#']
