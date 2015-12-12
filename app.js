@@ -1,6 +1,6 @@
 var config = require('config'),
     amqp = require('amqplib'),
-    async = require('async'),
+    exchangeService = require('./services/exchange-service');
     connectionString = 'amqp://' + config.rabbitmq.connection.host + ':' + config.rabbitmq.connection.port,
     connectionOpened = amqp.connect(connectionString);
 
@@ -18,14 +18,7 @@ connectionOpened.then(function(connection) {
 
     channelCreated.then(function(channel) {
         var queuesAsserted = {};
-        async.forEach(config.rabbitmq.exchanges, function(exchangeConfig) {
-            channel.assertExchange(
-
-                exchangeConfig.name,
-                exchangeConfig.type,
-                {durable: exchangeConfig.durable != undefined ? exchangeConfig.durable : true}
-            );
-        });
+        exchangeService.init(channel);
         config.rabbitmq.queues.forEach(function(queueConfig) {
             queueAsserted =
                 channel.assertQueue(
