@@ -1,6 +1,5 @@
 module.exports = function() {
-    var config = require('config'),
-        async = require('async');
+    var async = require('async');
 
     var loadExchange = function(channel, exchangeConfig) {
         channel.assertExchange(

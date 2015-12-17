@@ -1,8 +1,23 @@
-var config = require('config'),
-    amqp = require('amqplib'),
+var
+    async = require('async'),
+    fs = require('fs'),
+    yaml = require('js-yaml'),
+    InstanceService = require('./services/instance-service'),
     exchangeService = require('./services/exchange-service');
-    connectionString = 'amqp://' + config.amqp.connection.host + ':' + config.amqp.connection.port,
-    connectionOpened = amqp.connect(connectionString);
+
+if (process.argv.length < 3) {
+    console.log('No config specified');
+    process.exit(1);
+}
+var config = require(process.argv[2]);
+    
+async.forEach(instances, function(configFile, instanceName) {
+    instance = new InstanceService(configFile);
+    instance.run();
+});
+
+
+
 
 connectionOpened.then(function(connection) {
     process.once('SIGINT', function() {

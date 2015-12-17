@@ -1,0 +1,33 @@
+module.exports = {
+    amqp: {
+        connection: {
+            host: 'localhost',
+            port: 5672,
+            vhost: '/',
+            username: 'guest',
+            password: 'guest'
+        },
+        exchanges: [{
+            name: 'topic_exchange',
+            type: 'topic',
+            durable: true
+        }],
+        queues: [{
+            durable: true,
+            exchange: 'topic_exchange',
+            name: 'nodejs-process-bridge.queue',
+            routingKeys: ['#'],
+            async: true,
+            processor: '<some cmd call>'
+        }, {
+            durable: true,
+            exchange: 'topic_exchange',
+            name: 'nodejs-process-bridge.another_queue',
+            routingKeys: ['#'],
+            async: false,
+            processor: function(message) {
+                
+            }
+        }]
+    }
+};
