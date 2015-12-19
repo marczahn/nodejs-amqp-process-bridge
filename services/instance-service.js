@@ -1,32 +1,30 @@
-module.exports = function(configFile) {
-    var fs = require('fs'),
-        md5 = require('md5'),
-        currentConfigFileHash = '',
-        yaml = require('js-yaml'),
-        amqp = require('amqplib'),
-        //connectionString = 'amqp://' + config.amqp.connection.host + ':' + config.amqp.connection.port,
-        //connectionOpened = amqp.connect(connectionString);
-        config = yaml.safeLoad(getConfigFileContent());
-
-    var isConfigUpdated = function(configFileHash) {
-        return configFileHash != getConfigHash;
-    }
-
-    var getConfigHash = function() {
-        return md5(getConfigFileContent());
-    }
-
-    var getConfigFileContent = function() {
-        return fs.readfileSync(configFile);
-    }
-
-    // TODO - Start connection and so on
+module.exports = function(manifest) {
+    var amqp = require('amqplib/callback_api'),
+        exchangeService = require('./exchange-service'),
+        queueService = require('./queue-service'),
+        createConnection = function(callback) {
+                connection = amqp.connect(manifest.getConnectionConfig().getConnectionString(), callback);
+        },
+        run = function(connection) {
+            connection.createChannel(function(error, channel) {
+                if (error) {
+                    throw('Channel could not be opened: "' + error + '"')
+                }
+                exchangeService.configureExchanges(manifest.getExchangeConfig(), channel);
+                queueService.consume(manifest.getQueueConfig(), channel);
+            })
+        };
 
     // TODO - Interval checking config
 
     return {
         run: function() {
-
+            createConnection(function(error, connection) {
+                if (error) {
+                    throw('Connection could to RabbitMQ server could not be established: "' + error + '"')
+                }
+                run(connection);
+            });
         }
     };
 };
