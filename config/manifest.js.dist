@@ -17,16 +17,18 @@ module.exports = {
             exchange: 'topic_exchange',
             name: 'nodejs-process-bridge.queue',
             routingKeys: ['#'],
-            async: true,
-            processor: '<some cmd call>'
+            ackByProcessor: true,
+            processor: 'echo %message%'
         }, {
             durable: true,
             exchange: 'topic_exchange',
             name: 'nodejs-process-bridge.another_queue',
             routingKeys: ['#'],
-            async: false,
+            ackByProcessor: false,
             processor: function(message) {
-                
+                console.log(message);
+
+                return true;
             }
         }]
     }
