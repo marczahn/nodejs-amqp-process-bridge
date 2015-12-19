@@ -17,6 +17,6 @@
   },
   "dependencies": {
     "amqplib": "^0.4.0",
-    "async": "^1.5.0"
+    "promise": "^7.0.4"
   }
 }

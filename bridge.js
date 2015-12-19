@@ -1,5 +1,6 @@
 var amqp = require('amqplib'),
     child_process = require('child_process'),
+    Promise = require('promise'),
     ManifestService = require('./services/manifest-service');
 
 if (process.argv.length < 3) {
@@ -18,45 +19,58 @@ for (var i = 2; i < process.argv.length; ++i) {
 
 function runInstance(manifest) {
     var connectionOpened = amqp.connect(manifest.getConnectionConfig().getConnectionString());
+    connectionOpened.catch(function(error) {
+        console.log(error);
+    });
     connectionOpened.then(function(connection) {
         var channelCreated = connection.createChannel();
-
+        channelCreated.catch(function(error) {
+            console.log(error);
+        });
         channelCreated.then(function(channel) {
-            var queuesAsserted = {};
-            manifest.getExchangeConfig().forEach(function(exchangeConfig) {
-                channel.assertExchange(
+            var
+                exchangesAsserted = [],
+                queuesAsserted = [];
 
+            manifest.getExchangeConfig().forEach(function(exchangeConfig) {
+                var exchangeAsserted = channel.assertExchange(
                     exchangeConfig.name,
                     exchangeConfig.type,
                     {
                         durable: exchangeConfig.durable != undefined ? exchangeConfig.durable : true
                     }
                 );
+                exchangesAsserted.push(exchangeAsserted);
             });
-            manifest.getQueueConfig().forEach(function(queueConfig) {
-                queueAsserted =
-                    channel.assertQueue(
-                        queueConfig.name,
-                        {
-                            durable: queueConfig.durable != undefined ? queueConfig.durable : true
-                        }
-                    );
 
-                queueAsserted.then(function() {
-                    channel.prefetch(3);
-                }).then(function() {
-                    queueConfig.routingKeys.forEach(function (routingKey) {
-                        channel.bindQueue(
-                            queueConfig.name, queueConfig.exchange, routingKey
+            Promise.all(exchangesAsserted).then(function() {
+                manifest.getQueueConfig().forEach(function(queueConfig) {
+                    var queueAsserted =
+                        channel.assertQueue(
+                            queueConfig.name,
+                            {
+                                durable: queueConfig.durable != undefined ? queueConfig.durable : true
+                            }
                         );
+                    queueAsserted.then(function() {
+                        channel.prefetch(3);
+                        queueConfig.routingKeys.forEach(function (routingKey) {
+                            channel.bindQueue(
+                                queueConfig.name, queueConfig.exchange, routingKey
+                            );
+                        });
                     });
-                }).then(function() {
+                    queuesAsserted.push(queueAsserted);
+                });
+            });
+
+            Promise.all(queuesAsserted).then(function() {
+                manifest.getQueueConfig().forEach(function(queueConfig) {
                     channel.consume(queueConfig.name, function(message) {
                         worker(message, queueConfig, channel)
                     })
                     console.log('Start consuming on queue ' + queueConfig.name)
                 });
-                queuesAsserted[queueConfig.name] = queuesAsserted;
             });
         });
     });
