@@ -14,6 +14,7 @@ module.exports = {
         }],
         queues: [{
             durable: true,
+            consumers: 1,
             exchange: 'topic_exchange',
             name: 'nodejs-process-bridge.queue',
             routingKeys: ['#'],
@@ -21,6 +22,7 @@ module.exports = {
             processor: 'echo %message%'
         }, {
             durable: true,
+            consumers: 3,
             exchange: 'topic_exchange',
             name: 'nodejs-process-bridge.another_queue',
             routingKeys: ['#'],

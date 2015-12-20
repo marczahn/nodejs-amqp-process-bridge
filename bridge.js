@@ -66,9 +66,11 @@ function runInstance(manifest) {
 
             Promise.all(queuesAsserted).then(function() {
                 manifest.getQueueConfig().forEach(function(queueConfig) {
-                    channel.consume(queueConfig.name, function(message) {
-                        worker(message, queueConfig, channel)
-                    })
+                    for (var i = 0; i < queueConfig.consumers; ++i) {
+                        channel.consume(queueConfig.name, function (message) {
+                            worker(message, queueConfig, channel)
+                        });
+                    }
                     console.log('Start consuming on queue ' + queueConfig.name)
                 });
             });
