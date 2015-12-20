@@ -1,6 +1,6 @@
 var amqp = require('amqplib'),
-    child_process = require('child_process'),
     Promise = require('promise'),
+    workerService = require('./services/worker-service.js'),
     ManifestService = require('./services/manifest-service');
 
 if (process.argv.length < 3) {
@@ -17,58 +17,64 @@ for (var i = 2; i < process.argv.length; ++i) {
     }
 }
 
-function runInstance(manifest) {
-    var connectionOpened = amqp.connect(manifest.getConnectionConfig().getConnectionString());
-    connectionOpened.catch(function(error) {
+function catchConnectionError(manifest, error) {
+    console.log(error);
+}
+
+function afterConnectionOpened(manifest, connection) {
+    // Create channel
+    var channelCreated = connection.createChannel();
+    channelCreated.catch(function(error) {
         console.log(error);
     });
-    connectionOpened.then(function(connection) {
-        var channelCreated = connection.createChannel();
-        channelCreated.catch(function(error) {
-            console.log(error);
+    channelCreated.then(function(channel) {
+        var
+            exchangesAsserted = [],
+            queuesAsserted = [];
+
+        // Configure exchanges
+        manifest.getExchangeConfig().forEach(function(exchangeConfig) {
+            var exchangeAsserted = channel.assertExchange(
+                exchangeConfig.name,
+                exchangeConfig.type,
+                {
+                    durable: exchangeConfig.durable != undefined ? exchangeConfig.durable : true,
+                    autoDelete: exchangeConfig.autoDelete != undefined ? exchangeConfig.autoDelete : false,
+                    internal: exchangeConfig.internal != undefined ? exchangeConfig.internal : false,
+                    arguments: exchangeConfig.arguments != undefined ? exchangeConfig.arguments : {}
+                }
+            );
+            exchangesAsserted.push(exchangeAsserted);
         });
-        channelCreated.then(function(channel) {
-            var
-                exchangesAsserted = [],
-                queuesAsserted = [];
 
-            manifest.getExchangeConfig().forEach(function(exchangeConfig) {
-                var exchangeAsserted = channel.assertExchange(
-                    exchangeConfig.name,
-                    exchangeConfig.type,
-                    {
-                        durable: exchangeConfig.durable != undefined ? exchangeConfig.durable : true
-                    }
-                );
-                exchangesAsserted.push(exchangeAsserted);
-            });
-
-            Promise.all(exchangesAsserted).then(function() {
-                manifest.getQueueConfig().forEach(function(queueConfig) {
-                    var queueAsserted =
-                        channel.assertQueue(
-                            queueConfig.name,
-                            {
-                                durable: queueConfig.durable != undefined ? queueConfig.durable : true
-                            }
+        //Configure queues
+        Promise.all(exchangesAsserted).then(function() {
+            manifest.getQueueConfig().forEach(function(queueConfig) {
+                var queueAsserted =
+                    channel.assertQueue(
+                        queueConfig.name,
+                        {
+                            durable: queueConfig.durable != undefined ? queueConfig.durable : true,
+                            arguments: queueConfig.arguments != undefined ? queueConfig.arguments : {}
+                        }
+                    );
+                queueAsserted.then(function() {
+                    channel.prefetch(queueConfig.prefetch != undefined ? queueConfig.prefetch : 1);
+                    queueConfig.routingKeys.forEach(function (routingKey) {
+                        channel.bindQueue(
+                            queueConfig.name, queueConfig.exchange, routingKey
                         );
-                    queueAsserted.then(function() {
-                        channel.prefetch(3);
-                        queueConfig.routingKeys.forEach(function (routingKey) {
-                            channel.bindQueue(
-                                queueConfig.name, queueConfig.exchange, routingKey
-                            );
-                        });
                     });
-                    queuesAsserted.push(queueAsserted);
                 });
+                queuesAsserted.push(queueAsserted);
             });
 
+            // Start consuming
             Promise.all(queuesAsserted).then(function() {
                 manifest.getQueueConfig().forEach(function(queueConfig) {
                     for (var i = 0; i < queueConfig.consumers; ++i) {
                         channel.consume(queueConfig.name, function (message) {
-                            worker(message, queueConfig, channel)
+                            workerService.work(message, queueConfig, channel)
                         });
                     }
                     console.log('Start consuming on queue ' + queueConfig.name)
@@ -78,35 +84,22 @@ function runInstance(manifest) {
     });
 }
 
-function worker(message, queueConfig, channel) {
-    if (typeof queueConfig.processor == 'function') {
-        setTimeout(function() {
-            var result = queueConfig.processor.call(null, message.content.toString(), queueConfig, channel);
-            if (queueConfig.ackByProcessor && result) {
-                channel.ack(message);
-            }
-        }, 0);
-        if (!queueConfig.ackByProcessor) {
-            channel.ack(message);
-        }
+function runInstance(manifest) {
+    var connectionOpened = amqp.connect(manifest.getConnectionConfig().getConnectionString());
+    connectionOpened.catch(function(error) {
+        catchConnectionError(manifest, error);
+    });
+    // Open connection
+    connectionOpened.then(function(connection) {
+        afterConnectionOpened(manifest, connection);
 
-        return;
-    }
-
-    if (typeof queueConfig.processor == 'string') {
-        var cmd = queueConfig.processor.replace('%message%', message.content.toString());
-
-        child_process.exec(cmd, function (err, stdout, stderr){
-            if (err) {
-                return;
-            }
-            if (queueConfig.ackByProcessor) {
-                channel.ack(message);
-            }
+        process.once('SIGINT', function() {
+            console.log('Closing connection...');
+            var connectionClosed = connection.close();
+            connectionClosed.then(function() {
+                console.log('Connection closed');
+            })
         });
 
-        if (!queueConfig.ackByProcessor) {
-            channel.ack(message);
-        }
-    }
+    });
 }
