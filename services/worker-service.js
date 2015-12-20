@@ -4,14 +4,25 @@ module.exports = {
         console.log('message received on queue "' + queueConfig.name + '"');
 
         if (typeof queueConfig.processor == 'function') {
-            setTimeout(function () {
-                var result = queueConfig.processor.call(null, message.content.toString(), queueConfig, channel);
-                if (result) {
-                    channel.ack(message);
-                } else {
-                    setTimeout(function () {
+            var acknowledgeCallback = function(acknowledge) {
+                if (queueConfig.acknowledgeByProcessor) {
+                    if (acknowledge) {
+                        channel.ack(message);
+                    } else {
                         channel.reject(message, queueConfig.requeue);
-                    }, 1000);
+                    }
+                }
+            };
+            setTimeout(function () {
+                var result = queueConfig.processor.call(null, message.content.toString(), queueConfig, acknowledgeCallback);
+                if (queueConfig.acknowledgeByProcessor) {
+                    if (result) {
+                        channel.ack(message);
+                    } else {
+                        setTimeout(function () {
+                            channel.reject(message, queueConfig.requeue);
+                        }, 1000);
+                    }
                 }
             }, 0);
 

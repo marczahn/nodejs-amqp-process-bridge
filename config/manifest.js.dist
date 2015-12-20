@@ -37,7 +37,9 @@ module.exports = {
             exchange: 'topic_exchange',
             name: 'nodejs-process-bridge.queue',
             routingKeys: ['#'],
-            processor: function(message) {
+            ackByProcessor: true,
+            processor: function(message, queueConfig, acknowledgeCallback) {
+                acknowledgeCallback(true);
                 console.log(message);
 
                 return true;
