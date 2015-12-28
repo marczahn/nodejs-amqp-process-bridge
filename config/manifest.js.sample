@@ -1,0 +1,47 @@
+module.exports = {
+    connection: {
+        host: 'localhost',
+        port: 5672,
+        vhost: '/',
+        username: 'guest',
+        password: 'guest'
+    },
+    exchanges: [{
+        name: 'topic_exchange',
+        type: 'topic',
+        durable: true,
+        arguments: {
+            'x-ha-mode': 'all'
+        }
+    }],
+    queues: [{
+        prefetch: 1,
+        durable: true,
+        arguments: {
+            'x-ha-mode': 'all'
+        },
+        requeue: false,
+        consumers: 4,
+        exchange: 'topic_exchange',
+        name: 'nodejs-process-bridge.another_queue',
+        routingKeys: ['#'],
+        processor: 'echo ---------- && echo %message% && date && echo ---------- && sleep 5'
+    }, {
+        arguments: {
+            'x-ha-mode': 'all'
+        },
+        requeue: false,
+        durable: true,
+        consumers: 3,
+        exchange: 'topic_exchange',
+        name: 'nodejs-process-bridge.queue',
+        routingKeys: ['#'],
+        ackByProcessor: true,
+        processor: function(message, queueConfig, acknowledgeCallback) {
+            acknowledgeCallback(true);
+            console.log(message);
+
+            return true;
+        }
+    }]
+};
