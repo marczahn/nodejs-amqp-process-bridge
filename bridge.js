@@ -33,15 +33,15 @@ function afterConnectionOpened(manifest, connection) {
             queuesAsserted = [];
 
         // Configure exchanges
-        manifest.getExchangeConfig().forEach(function(exchangeConfig) {
+        manifest.getExchangeConfigs().forEach(function(exchangeConfig) {
             var exchangeAsserted = channel.assertExchange(
                 exchangeConfig.name,
                 exchangeConfig.type,
                 {
-                    durable: exchangeConfig.durable != undefined ? exchangeConfig.durable : true,
-                    autoDelete: exchangeConfig.autoDelete != undefined ? exchangeConfig.autoDelete : false,
-                    internal: exchangeConfig.internal != undefined ? exchangeConfig.internal : false,
-                    arguments: exchangeConfig.arguments != undefined ? exchangeConfig.arguments : {}
+                    durable: exchangeConfig.durable,
+                    autoDelete: exchangeConfig.autoDelete,
+                    internal: exchangeConfig.internal,
+                    arguments: exchangeConfig.arguments
                 }
             );
             exchangesAsserted.push(exchangeAsserted);
@@ -49,7 +49,7 @@ function afterConnectionOpened(manifest, connection) {
 
         //Configure queues
         Promise.all(exchangesAsserted).then(function() {
-            manifest.getQueueConfig().forEach(function(queueConfig) {
+            manifest.getQueueConfigs().forEach(function(queueConfig) {
                 var queueAsserted =
                     channel.assertQueue(
                         queueConfig.name,
@@ -71,7 +71,7 @@ function afterConnectionOpened(manifest, connection) {
 
             // Start consuming
             Promise.all(queuesAsserted).then(function() {
-                manifest.getQueueConfig().forEach(function(queueConfig) {
+                manifest.getQueueConfigs().forEach(function(queueConfig) {
                     for (var i = 0; i < queueConfig.consumers; ++i) {
                         channel.consume(queueConfig.name, function (message) {
                             workerService.work(message, queueConfig, channel)
