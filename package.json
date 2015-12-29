@@ -16,6 +16,7 @@
     "url": "https://github.com/marczahnlls/nodejs-process-bridge/issues"
   },
   "dependencies": {
+    "airbrake": "^0.3.8",
     "amqplib": "^0.4.0",
     "extend": "^3.0.0",
     "promise": "^7.0.4"

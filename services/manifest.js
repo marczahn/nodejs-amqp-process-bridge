@@ -1,4 +1,4 @@
-module.exports = function() {
+(function() {
     if (process.argv.length != 3) {
         throw new Error('No manifest defined', 1);
     }
@@ -37,6 +37,15 @@ module.exports = function() {
                 config
             );
         },
+        AirbrakeConfig = function(config) {
+            return extend(
+                {
+                    environment: 'development',
+                    projectKey: ''
+                },
+                config
+            );
+        },
         exchangeConfigs = [],
         queueConfigs = []
         manifest = require(manifestFile);
@@ -47,7 +56,7 @@ module.exports = function() {
     for (var i in manifest.queues) {
         queueConfigs.push(new QueueConfig(manifest.queues[i]));
     }
-    return {
+    module.exports = {
         getConnectionConfig: function() {
             return {
                 parameters: manifest.connection,
@@ -68,6 +77,9 @@ module.exports = function() {
         },
         getQueueConfigs: function() {
             return queueConfigs;
+        },
+        getAirbrakeConfig: function() {
+            return new AirbrakeConfig(manifest.airbrake);
         }
     };
-}();
+})();

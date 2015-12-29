@@ -1,4 +1,8 @@
 module.exports = {
+    airbrake: {
+        environment: '',
+        projectKey: '',
+    }
     connection: {
         host: 'localhost',
         port: 5672,

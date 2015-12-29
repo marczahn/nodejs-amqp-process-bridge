@@ -1,7 +1,8 @@
 var amqp = require('amqplib'),
     Promise = require('promise'),
     workerService = require('./services/worker-service.js'),
-    manifestService = require('./services/manifest-service'),
+    manifest = require('./services/manifest'),
+    airbrake = require('./services/airbrake'),
     appContext = this,
     afterConnectionOpened = function(connection) {
     // Create channel
@@ -15,7 +16,7 @@ var amqp = require('amqplib'),
                 queuesAsserted = [];
 
             // Configure exchanges
-            manifestService.getExchangeConfigs().forEach(function(exchangeConfig) {
+            manifest.getExchangeConfigs().forEach(function(exchangeConfig) {
                 var exchangeAsserted = channel.assertExchange(
                     exchangeConfig.name,
                     exchangeConfig.type,
@@ -31,7 +32,7 @@ var amqp = require('amqplib'),
 
             //Configure queues
             Promise.all(exchangesAsserted).then(function() {
-                manifestService.getQueueConfigs().forEach(function(queueConfig) {
+                manifest.getQueueConfigs().forEach(function(queueConfig) {
                     var queueAsserted =
                         channel.assertQueue(
                             queueConfig.name,
@@ -53,7 +54,7 @@ var amqp = require('amqplib'),
 
                 // Start consuming
                 Promise.all(queuesAsserted).then(function() {
-                    manifestService.getQueueConfigs().forEach(function(queueConfig) {
+                    manifest.getQueueConfigs().forEach(function(queueConfig) {
                         for (var i = 0; i < queueConfig.consumers; ++i) {
                             channel.consume(queueConfig.name, function (message) {
                                 workerService.work(message, queueConfig, channel)
@@ -66,13 +67,14 @@ var amqp = require('amqplib'),
         });
     },
     run = function() {
-        var connectionOpened = amqp.connect(manifestService.getConnectionConfig().getConnectionString());
+        var connectionOpened = amqp.connect(manifest.getConnectionConfig().getConnectionString());
         connectionOpened.then(function(connection) {
             connection.on('close', function(error) {
                 if (error != 'Closed by client') {
+                    airbrake.notify(new Error(error));
                     run.call(appContext);
                 }
-            });
+            })
             afterConnectionOpened(connection);
 
             process.once('SIGINT', function() {
@@ -83,7 +85,13 @@ var amqp = require('amqplib'),
                 })
             });
 
-        });
+        }).catch(function(error) {
+            console.log(error);
+        });;
     };
 
+process.on('unhandledRejection', function(reason, p){
+    console.log("Possibly Unhandled Rejection at: Promise ", p, " reason: ", reason);
+    // application specific logging here
+});
 run();

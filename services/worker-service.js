@@ -1,6 +1,6 @@
-var child_process = require('child_process');
-module.exports = function() {
-    return {
+(function() {
+    var child_process = require('child_process');
+    module.exports = {
         work: function (message, queueConfig, channel) {
             console.log('message received on queue "' + queueConfig.name + '"');
 
@@ -48,5 +48,5 @@ module.exports = function() {
                 });
             }
         }
-    }
-}();
+    };
+})();
