@@ -16,7 +16,7 @@
                 };
                 setTimeout(function () {
                     var result = queueConfig.processor.call(null, message.content.toString(), queueConfig, acknowledgeCallback);
-                    if (queueConfig.acknowledgeByProcessor) {
+                    if (queueConfig.autoAck) {
                         if (result) {
                             channel.ack(message);
                         } else {
@@ -32,7 +32,9 @@
 
             if (typeof queueConfig.processor == 'string') {
                 var cmd = queueConfig.processor.replace('%message%', message.content.toString());
-
+                if (queueConfig.autoAck) {
+                    channel.ack(message);
+                }
                 child_process.exec(cmd, function (err, stdout, stderr) {
                     if (err) {
                         console.error(err)
