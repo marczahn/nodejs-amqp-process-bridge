@@ -1,5 +1,5 @@
 {
-  "name": "nodejs-process-bridge",
+  "name": "nodejs-amqp-process-bridge",
   "version": "0.0.0",
   "description": "",
   "main": "bridge.js",
@@ -8,12 +8,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/marczahnlls/nodejs-process-bridge.git"
+    "url": "https://github.com/marczahnlls/nodejs-amqp-process-bridge.git"
   },
   "author": "Marc Zahn",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/marczahnlls/nodejs-process-bridge/issues"
+    "url": "https://github.com/marczahnlls/nodejs-amqp-process-bridge/issues"
   },
   "dependencies": {
     "airbrake": "^0.3.8",
